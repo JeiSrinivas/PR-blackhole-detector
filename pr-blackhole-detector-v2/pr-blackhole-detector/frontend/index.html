@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PR Blackhole Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #050810;
+    --surface: #0a0f1e;
+    --surface2: #0f1629;
+    --border: #1a2240;
+    --border2: #243060;
+    --accent: #00f5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --red: #ff3366;
+    --orange: #ff6b35;
+    --green: #00ff88;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --glow: 0 0 30px rgba(0,245,255,0.15);
+    --glow-red: 0 0 30px rgba(255,51,102,0.2);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* STARFIELD BG */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(0,245,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 80%, rgba(124,58,237,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(2px 2px at 15% 75%, rgba(0,245,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 15%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 45% 90%, rgba(255,51,102,0.2) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SCAN LINE EFFECT */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #app { position: relative; z-index: 1; }
+
+  /* HEADER */
+  .header {
+    padding: 32px 40px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .logo-area {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .logo-tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .logo {
+    font-family: var(--font-head);
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent) 0%, #ffffff 40%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 20px rgba(0,245,255,0.4));
+  }
+
+  .logo-sub {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .pulse-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* SCAN FORM */
+  .scan-section {
+    padding: 40px 40px 0;
+  }
+
+  .scan-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scan-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .scan-title {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.5fr auto auto;
+    gap: 12px;
+    align-items: end;
+  }
+
+  @media (max-width: 900px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .btn-scan, .btn-demo { grid-column: span 1; }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .field input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,245,255,0.1);
+  }
+
+  .field input::placeholder { color: var(--muted); }
+
+  .btn-scan {
+    background: linear-gradient(135deg, var(--accent2), #4f46e5);
+    border: none;
+    border-radius: 6px;
+    padding: 11px 28px;
+    color: white;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  }
+
+  .btn-scan:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(124,58,237,0.6);
+  }
+
+  .btn-scan:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-demo {
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 11px 20px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-demo:hover {
+    border-color: var(--accent3);
+    color: var(--accent3);
+    box-shadow: 0 0 20px rgba(245,158,11,0.15);
+  }
+
+  /* ERROR */
+  .error-bar {
+    margin: 16px 40px 0;
+    background: rgba(255,51,102,0.1);
+    border: 1px solid rgba(255,51,102,0.3);
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--red);
+    display: none;
+  }
+
+  .error-bar.show { display: block; }
+
+  /* LOADING */
+  .loading-overlay {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 40px;
+    gap: 24px;
+  }
+
+  .loading-overlay.show { display: flex; }
+
+  .vortex {
+    width: 80px; height: 80px;
+    position: relative;
+  }
+
+  .vortex-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    animation: spin 1.5s linear infinite;
+  }
+
+  .vortex-ring:nth-child(1) {
+    border-top-color: var(--accent);
+    animation-duration: 1s;
+  }
+  .vortex-ring:nth-child(2) {
+    inset: 10px;
+    border-right-color: var(--accent2);
+    animation-duration: 1.5s;
+    animation-direction: reverse;
+  }
+  .vortex-ring:nth-child(3) {
+    inset: 20px;
+    border-bottom-color: var(--red);
+    animation-duration: 2s;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: var(--font-head);
+    font-size: 16px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  .loading-sub { font-size: 11px; color: var(--muted); }
+
+  /* DASHBOARD */
+  #dashboard { display: none; }
+  #dashboard.show { display: block; }
+
+  .dashboard-padding { padding: 32px 40px; }
+
+  /* REPO BAR */
+  .repo-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .repo-name {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+  }
+
+  .repo-name span { color: var(--accent); }
+
+  .demo-badge {
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(245,158,11,0.15);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: var(--accent3);
+  }
+
+  .health-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 20px;
+  }
+
+  .health-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+  .health-score {
+    font-family: var(--font-head);
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--green);
+  }
+
+  /* STAT TILES */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stat-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: default;
+  }
+
+  .stat-tile:hover {
+    transform: translateY(-3px);
+    border-color: var(--border2);
+  }
+
+  .stat-tile::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .stat-tile.blackhole::after { background: var(--red); }
+  .stat-tile.delayed::after { background: var(--orange); }
+  .stat-tile.idle::after { background: var(--accent3); }
+  .stat-tile.approved::after { background: var(--green); }
+  .stat-tile.active::after { background: var(--accent); }
+  .stat-tile.total::after { background: var(--accent2); }
+
+  .stat-icon { font-size: 22px; margin-bottom: 12px; }
+  .stat-value {
+    font-family: var(--font-head);
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-tile.blackhole .stat-value { color: var(--red); }
+  .stat-tile.delayed .stat-value { color: var(--orange); }
+  .stat-tile.idle .stat-value { color: var(--accent3); }
+  .stat-tile.approved .stat-value { color: var(--green); }
+  .stat-tile.active .stat-value { color: var(--accent); }
+  .stat-tile.total .stat-value { color: white; }
+
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+  /* MAIN GRID */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* SECTION CARD */
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .section-count {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  /* PR LIST */
+  .pr-list { padding: 8px; }
+
+  .pr-item {
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .pr-item:hover {
+    background: var(--surface2);
+    border-color: var(--border);
+  }
+
+  .pr-item-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .pr-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pr-num {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+
+  .pr-title {
+    font-size: 13px;
+    font-family: var(--font-head);
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+  }
+
+  .status-pill {
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .pill-blackhole { background: rgba(255,51,102,0.15); color: var(--red); border: 1px solid rgba(255,51,102,0.3); }
+  .pill-delayed { background: rgba(255,107,53,0.15); color: var(--orange); border: 1px solid rgba(255,107,53,0.3); }
+  .pill-idle { background: rgba(245,158,11,0.15); color: var(--accent3); border: 1px solid rgba(245,158,11,0.3); }
+  .pill-changes_requested { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+  .pill-approved { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .pill-active { background: rgba(0,245,255,0.1); color: var(--accent); border: 1px solid rgba(0,245,255,0.3); }
+
+  .pr-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .pr-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .pr-meta-item.warn { color: var(--orange); }
+  .pr-meta-item.crit { color: var(--red); }
+
+  .avatar {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--surface2);
+    flex-shrink: 0;
+  }
+
+  .avatar img { width: 100%; height: 100%; }
+
+  .label-chip {
+    font-size: 10px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-family: var(--font-mono);
+  }
+
+  .diff-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+  }
+
+  .diff-add { color: var(--green); }
+  .diff-del { color: var(--red); }
+
+  /* INSIGHTS */
+  .insights-list { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  .insight-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .insight-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+
+  .insight-card.critical::before { background: var(--red); }
+  .insight-card.warning::before { background: var(--orange); }
+  .insight-card.info::before { background: var(--accent); }
+  .insight-card.success::before { background: var(--green); }
+
+  .insight-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .insight-icon { font-size: 18px; }
+  .insight-title {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .insight-msg { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  /* CHARTS ROW */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
+
+  .chart-wrap { padding: 24px; height: 280px; position: relative; }
+
+  /* TOP CONTRIBUTORS */
+  .contributors-section { margin-bottom: 32px; }
+  .contrib-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .contrib-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .contrib-name { font-size: 12px; color: var(--text); }
+  .contrib-bar-wrap {
+    flex: 1;
+    margin: 0 12px;
+    height: 4px;
+    background: var(--bg);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .contrib-bar {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+  }
+
+  .contrib-count {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    font-size: 11px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,245,255,0.07);
+  }
+
+  /* FOOTER */
+  .footer {
+    padding: 24px 40px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  /* ANIMATIONS */
+  .fade-in { animation: fadeIn 0.4s ease forwards; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .stagger > * {
+    opacity: 0;
+    animation: fadeIn 0.4s ease forwards;
+  }
+
+  .stagger > *:nth-child(1) { animation-delay: 0.05s; }
+  .stagger > *:nth-child(2) { animation-delay: 0.1s; }
+  .stagger > *:nth-child(3) { animation-delay: 0.15s; }
+  .stagger > *:nth-child(4) { animation-delay: 0.2s; }
+  .stagger > *:nth-child(5) { animation-delay: 0.25s; }
+  .stagger > *:nth-child(6) { animation-delay: 0.3s; }
+
+  /* EMPTY */
+  .empty-state {
+    padding: 60px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .empty-state .big { font-size: 40px; margin-bottom: 12px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* PR LINK */
+  .pr-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    opacity: 0;
+  }
+
+  /* CRITICAL PR GLOW */
+  .pr-item.status-blackhole {
+    background: rgba(255,51,102,0.04);
+  }
+
+  .pr-item.status-blackhole:hover {
+    background: rgba(255,51,102,0.08);
+    border-color: rgba(255,51,102,0.2);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo-area">
+      <span class="logo-tag">// github analytics</span>
+      <h1 class="logo">PR Blackhole Detector</h1>
+      <p class="logo-sub">IDENTIFY BOTTLENECKS · UNBLOCK PIPELINES · SHIP FASTER</p>
+    </div>
+    <div class="header-status">
+      <div class="pulse-dot"></div>
+      <span>SYSTEM ONLINE</span>
+    </div>
+  </header>
+
+  <!-- SCAN FORM -->
+  <section class="scan-section">
+    <div class="scan-card">
+      <div class="scan-title">// Initialize Scan</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Owner / Org</label>
+          <input type="text" id="input-owner" placeholder="e.g. facebook" />
+        </div>
+        <div class="field">
+          <label>Repository</label>
+          <input type="text" id="input-repo" placeholder="e.g. react" />
+        </div>
+        <div class="field">
+          <label>GitHub Token (optional)</label>
+          <input type="password" id="input-token" placeholder="ghp_••••••••••••••" />
+        </div>
+        <button class="btn-scan" id="btn-scan">⚡ Scan PRs</button>
+        <button class="btn-demo" id="btn-demo">🛸 Demo Mode</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="error-bar" id="error-bar"></div>
+
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loading">
+    <div class="vortex">
+      <div class="vortex-ring"></div>
+      <div class="vortex-ring"></div>
+      <div class="vortex-ring"></div>
+    </div>
+    <div class="loading-text">SCANNING REPOSITORY</div>
+    <div class="loading-sub" id="loading-sub">Traversing pull request graph...</div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard">
+    <div class="dashboard-padding">
+
+      <!-- REPO BAR -->
+      <div class="repo-bar">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div class="repo-name" id="repo-display">—</div>
+          <div class="demo-badge" id="demo-badge" style="display:none;">DEMO DATA</div>
+        </div>
+        <div class="health-badge">
+          <div>
+            <div class="health-label">PIPELINE HEALTH</div>
+            <div class="health-score" id="health-score">—</div>
+          </div>
+          <div style="font-size:28px;" id="health-emoji">🟢</div>
+        </div>
+      </div>
+
+      <!-- STATS TILES -->
+      <div class="stats-grid stagger" id="stats-grid">
+        <div class="stat-tile total">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Total Open PRs</div>
+        </div>
+        <div class="stat-tile blackhole">
+          <div class="stat-icon">🕳️</div>
+          <div class="stat-value" id="stat-blackhole">0</div>
+          <div class="stat-label">Blackholes</div>
+        </div>
+        <div class="stat-tile delayed">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-value" id="stat-delayed">0</div>
+          <div class="stat-label">Delayed</div>
+        </div>
+        <div class="stat-tile idle">
+          <div class="stat-icon">😴</div>
+          <div class="stat-value" id="stat-idle">0</div>
+          <div class="stat-label">Idle (No Review)</div>
+        </div>
+        <div class="stat-tile approved">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="stat-approved">0</div>
+          <div class="stat-label">Approved</div>
+        </div>
+        <div class="stat-tile active">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-value" id="stat-avg">0d</div>
+          <div class="stat-label">Avg PR Age</div>
+        </div>
+      </div>
+
+      <!-- MAIN: PR LIST + INSIGHTS -->
+      <div class="main-grid">
+        <!-- PR LIST -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-title">// Pull Requests</span>
+            <span class="section-count" id="pr-count-label">0 PRs</span>
+          </div>
+          <div class="filter-bar" id="filter-bar">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="blackhole">🕳️ Blackhole</button>
+            <button class="filter-btn" data-filter="delayed">⏳ Delayed</button>
+            <button class="filter-btn" data-filter="idle">😴 Idle</button>
+            <button class="filter-btn" data-filter="changes_requested">🔁 Changes</button>
+            <button class="filter-btn" data-filter="approved">✅ Approved</button>
+            <button class="filter-btn" data-filter="active">⚡ Active</button>
+          </div>
+          <div class="pr-list" id="pr-list"></div>
+        </div>
+
+        <!-- INSIGHTS -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-title">// AI Insights</span>
+          </div>
+          <div class="insights-list" id="insights-list"></div>
+        </div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="charts-row">
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-title">// Status Distribution</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-donut"></canvas>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-title">// PR Age by Status</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-bar"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTRIBUTORS -->
+      <div class="section-card contributors-section">
+        <div class="section-header">
+          <span class="section-title">// Top Authors</span>
+        </div>
+        <div class="contrib-grid stagger" id="authors-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <span>PR Blackhole Detector &mdash; Built for Hackathon 2026</span>
+    <span>Powered by GitHub API &amp; Node.js</span>
+  </footer>
+
+</div>
+
+<script>
+const API = '';  // relative URLs
+
+let allPRs = [];
+let activeFilter = 'all';
+let donutChart = null;
+let barChart = null;
+
+const statusOrder = ['blackhole', 'delayed', 'idle', 'changes_requested', 'approved', 'active'];
+
+// ELEMENTS
+const btnScan = document.getElementById('btn-scan');
+const btnDemo = document.getElementById('btn-demo');
+const loading = document.getElementById('loading');
+const dashboard = document.getElementById('dashboard');
+const errorBar = document.getElementById('error-bar');
+
+function showError(msg) {
+  errorBar.textContent = '⚠ ' + msg;
+  errorBar.classList.add('show');
+  setTimeout(() => errorBar.classList.remove('show'), 6000);
+}
+
+function setLoading(on, msg = 'Traversing pull request graph...') {
+  document.getElementById('loading-sub').textContent = msg;
+  loading.classList.toggle('show', on);
+  btnScan.disabled = on;
+  btnDemo.disabled = on;
+}
+
+async function scan() {
+  const owner = document.getElementById('input-owner').value.trim();
+  const repo = document.getElementById('input-repo').value.trim();
+  const token = document.getElementById('input-token').value.trim();
+  if (!owner || !repo) { showError('Please enter both owner and repository name.'); return; }
+
+  setLoading(true, `Fetching PRs from ${owner}/${repo}...`);
+  dashboard.classList.remove('show');
+  try {
+    const res = await fetch(`${API}/api/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner, repo, token })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Scan failed');
+    renderDashboard(data);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function demo() {
+  setLoading(true, 'Loading synthetic demo data...');
+  dashboard.classList.remove('show');
+  try {
+    const res = await fetch(`${API}/api/demo`);
+    const data = await res.json();
+    renderDashboard(data);
+  } catch (e) {
+    showError('Demo data failed to load. Is the server running?');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderDashboard(data) {
+  const { prs, stats, insights, repo, demo: isDemo } = data;
+  allPRs = prs;
+
+  // Repo bar
+  const parts = repo.split('/');
+  document.getElementById('repo-display').innerHTML =
+    `<span>${parts[0]}</span> / <span style="color:white">${parts[1] || ''}</span>`;
+  document.getElementById('demo-badge').style.display = isDemo ? 'inline-block' : 'none';
+
+  // Health score
+  const score = stats.healthScore;
+  document.getElementById('health-score').textContent = score + '/100';
+  document.getElementById('health-emoji').textContent = score >= 80 ? '🟢' : score >= 50 ? '🟡' : '🔴';
+
+  // Stats
+  document.getElementById('stat-total').textContent = stats.total;
+  document.getElementById('stat-blackhole').textContent = stats.byStatus.blackhole || 0;
+  document.getElementById('stat-delayed').textContent = stats.byStatus.delayed || 0;
+  document.getElementById('stat-idle').textContent = stats.byStatus.idle || 0;
+  document.getElementById('stat-approved').textContent = stats.byStatus.approved || 0;
+  document.getElementById('stat-avg').textContent = stats.avgAge + 'd';
+
+  // PRs
+  activeFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === 'all'));
+  renderPRList(prs);
+
+  // Insights
+  renderInsights(insights);
+
+  // Charts
+  renderCharts(stats, prs);
+
+  // Authors
+  renderAuthors(stats.topAuthors, stats.topAuthors[0]?.count || 1);
+
+  dashboard.classList.add('show');
+  dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderPRList(prs) {
+  const filtered = activeFilter === 'all' ? prs : prs.filter(p => p.status === activeFilter);
+  const sorted = [...filtered].sort((a, b) => {
+    const oi = statusOrder.indexOf(a.status);
+    const oj = statusOrder.indexOf(b.status);
+    return oi !== oj ? oi - oj : b.ageDays - a.ageDays;
+  });
+
+  document.getElementById('pr-count-label').textContent = sorted.length + ' PRs';
+  const list = document.getElementById('pr-list');
+
+  if (!sorted.length) {
+    list.innerHTML = `<div class="empty-state"><div class="big">🎉</div>No PRs match this filter</div>`;
+    return;
+  }
+
+  list.innerHTML = sorted.map(pr => {
+    const statusLabel = {
+      blackhole: '🕳️ Blackhole',
+      delayed: '⏳ Delayed',
+      idle: '😴 Idle',
+      changes_requested: '🔁 Changes Requested',
+      approved: '✅ Approved',
+      active: '⚡ Active',
+    }[pr.status] || pr.status;
+
+    const ageClass = pr.ageDays >= 30 ? 'crit' : pr.ageDays >= 7 ? 'warn' : '';
+    const labels = pr.labels.slice(0, 2).map(l =>
+      `<span class="label-chip" style="background:#${l.color}22;color:#${l.color};border:1px solid #${l.color}44">${l.name}</span>`
+    ).join('');
+
+    const reviewers = pr.reviewers.slice(0, 3).map(r => {
+      const icon = r.state === 'APPROVED' ? '✅' : r.state === 'CHANGES_REQUESTED' ? '❌' : '💬';
+      return `<span class="pr-meta-item">${icon} ${r.login}</span>`;
+    }).join('');
+
+    return `
+    <div class="pr-item status-${pr.status}" title="PR #${pr.id}: ${pr.title}">
+      ${pr.url !== '#' ? `<a href="${pr.url}" target="_blank" class="pr-link"></a>` : ''}
+      <div class="pr-item-top">
+        <div class="pr-title-row">
+          <span class="pr-num">#${pr.id}</span>
+          <span class="pr-title">${escHtml(pr.title)}${pr.draft ? ' <span style="color:var(--muted);font-size:10px">[DRAFT]</span>' : ''}</span>
+        </div>
+        <span class="status-pill pill-${pr.status}">${statusLabel}</span>
+      </div>
+      <div class="pr-meta">
+        <div class="pr-meta-item">
+          <div class="avatar"><img src="${pr.authorAvatar}" alt="${pr.author}" onerror="this.style.display='none'"></div>
+          ${escHtml(pr.author)}
+        </div>
+        <div class="pr-meta-item ${ageClass}">⏱ ${pr.ageDays}d old</div>
+        ${pr.reviewCount > 0 ? `<div class="pr-meta-item">👁 ${pr.reviewCount} reviews</div>` : ''}
+        <div class="diff-bar">
+          <span class="diff-add">+${pr.additions}</span>
+          <span class="diff-del">-${pr.deletions}</span>
+          <span style="color:var(--muted)">(${pr.changedFiles} files)</span>
+        </div>
+        ${labels}
+        ${reviewers}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderInsights(insights) {
+  const el = document.getElementById('insights-list');
+  if (!insights.length) {
+    el.innerHTML = '<div class="empty-state"><div class="big">🤖</div>No insights generated</div>';
+    return;
+  }
+  el.innerHTML = insights.map(i => `
+    <div class="insight-card ${i.type} fade-in">
+      <div class="insight-header">
+        <span class="insight-icon">${i.icon}</span>
+        <span class="insight-title">${escHtml(i.title)}</span>
+      </div>
+      <div class="insight-msg">${escHtml(i.message)}</div>
+    </div>
+  `).join('');
+}
+
+function renderCharts(stats, prs) {
+  const byStatus = stats.byStatus;
+
+  const donutCtx = document.getElementById('chart-donut').getContext('2d');
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(donutCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Blackhole', 'Delayed', 'Idle', 'Changes', 'Approved', 'Active'],
+      datasets: [{
+        data: [
+          byStatus.blackhole || 0,
+          byStatus.delayed || 0,
+          byStatus.idle || 0,
+          byStatus.changes_requested || 0,
+          byStatus.approved || 0,
+          byStatus.active || 0,
+        ],
+        backgroundColor: ['#ff3366', '#ff6b35', '#f59e0b', '#7c3aed', '#00ff88', '#00f5ff'],
+        borderColor: '#0a0f1e',
+        borderWidth: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#64748b', font: { family: 'Space Mono', size: 10 }, padding: 12 }
+        }
+      },
+      cutout: '65%',
+    }
+  });
+
+  const barCtx = document.getElementById('chart-bar').getContext('2d');
+  if (barChart) barChart.destroy();
+
+  const ageBuckets = { '0-3d': 0, '4-7d': 0, '8-14d': 0, '15-30d': 0, '30d+': 0 };
+  prs.forEach(pr => {
+    if (pr.ageDays <= 3) ageBuckets['0-3d']++;
+    else if (pr.ageDays <= 7) ageBuckets['4-7d']++;
+    else if (pr.ageDays <= 14) ageBuckets['8-14d']++;
+    else if (pr.ageDays <= 30) ageBuckets['15-30d']++;
+    else ageBuckets['30d+']++;
+  });
+
+  barChart = new Chart(barCtx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(ageBuckets),
+      datasets: [{
+        label: 'PRs',
+        data: Object.values(ageBuckets),
+        backgroundColor: ['#00ff88', '#00f5ff', '#f59e0b', '#ff6b35', '#ff3366'],
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#1a2240' }, ticks: { color: '#64748b', font: { family: 'Space Mono', size: 10 } } },
+        y: { grid: { color: '#1a2240' }, ticks: { color: '#64748b', font: { family: 'Space Mono', size: 10 }, stepSize: 1 } }
+      }
+    }
+  });
+}
+
+function renderAuthors(authors, max) {
+  const el = document.getElementById('authors-list');
+  if (!authors.length) { el.innerHTML = ''; return; }
+  el.innerHTML = authors.map(a => `
+    <div class="contrib-row">
+      <span class="contrib-name">${escHtml(a.login)}</span>
+      <div class="contrib-bar-wrap">
+        <div class="contrib-bar" style="width:${Math.round((a.count / max) * 100)}%"></div>
+      </div>
+      <span class="contrib-count">${a.count} PR${a.count > 1 ? 's' : ''}</span>
+    </div>
+  `).join('');
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// FILTERS
+document.getElementById('filter-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  activeFilter = btn.dataset.filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+  renderPRList(allPRs);
+});
+
+// EVENTS
+btnScan.addEventListener('click', scan);
+btnDemo.addEventListener('click', demo);
+
+document.getElementById('input-owner').addEventListener('keydown', e => e.key === 'Enter' && scan());
+document.getElementById('input-repo').addEventListener('keydown', e => e.key === 'Enter' && scan());
+
+// Auto demo if no backend (show helpful UX)
+window.addEventListener('load', () => {
+  document.getElementById('input-owner').focus();
+});
+</script>
+</body>
+</html>
