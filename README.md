@@ -1,206 +1,211 @@
 # 🕳️ PR Blackhole Detector
 
-> **"Every PR that dies in review is a feature your users never got."**
+🔗 **Live Demo:** https://pr-blackhole-detector.vercel.app
 
-A real-time GitHub Pull Request intelligence dashboard that hunts down bottlenecks, flags review overload, and generates plain-English insights so your team can stop losing work to the void.
+> **“We don’t track code. We track the waiting.”**
 
----
-
-## 🏆 What Problem Does This Solve?
-
-Most engineering teams have **no visibility** into their PR pipeline until it's too late:
-- A critical bug fix sits unreviewed for **6 weeks** — nobody noticed.
-- One senior engineer is assigned **12 open PRs** simultaneously — they're drowning.
-- Junior developers open PRs and **never hear back** — they quit.
-
-PR Blackhole Detector shines a light on these invisible failures **before they become people problems.**
+A real-time GitHub Pull Request intelligence tool that exposes **hidden delays, silent failures, and bottlenecks** in developer workflows — before they impact delivery.
 
 ---
 
-## ✨ Features
+## 🚨 The Problem
 
-| Feature | Description |
-|---|---|
-| 🕳️ **Blackhole Detection** | PRs open 30+ days with no approval — surfaced instantly |
-| ⏳ **Delay Tracking** | PRs stale for 7+ days — shown with exact staleness |
-| 😴 **Idle PR Alerts** | PRs with zero reviews — the most dangerous silent killers |
-| 📊 **Visual Analytics** | Status donut + age distribution bar chart |
-| 🤖 **AI-Style Insights** | Plain-English summaries: "Alice is overloaded with 8 PRs" |
-| ⚡ **Filter & Sort** | One-click filtering by status, sorted by severity |
-| 🛸 **Demo Mode** | Full working demo — no GitHub token required |
-| 💯 **Health Score** | 0–100 pipeline score with real-time calculation |
+Modern engineering teams optimize for:
+
+* Commits
+* Velocity
+* Deployments
+
+…but ignore the biggest productivity killer:
+
+> ⏳ **Waiting after PR creation**
+
+### ⚠️ What actually happens:
+
+* PRs sit unreviewed for hours (or days)
+* Developers context-switch → productivity drops
+* Review workload is uneven → bottlenecks form
+* Delays stay invisible → until releases slow down
 
 ---
 
-## 🎨 Tech Stack
+### 💥 Real Impact
+
+* 🐌 Slower releases
+* 😤 Developer frustration
+* 🔁 Context switching overhead
+* 📉 Reduced team efficiency
+
+> A delayed PR is not just code waiting — it's **value delayed to users**.
+
+---
+
+## 💡 Our Solution
+
+**PR Blackhole Detector** acts like an X-ray for your development workflow.
+
+It:
+
+* 🔍 Detects hidden PR delays
+* 📊 Measures real bottlenecks
+* 🧠 Explains issues in plain English
+* ⚡ Suggests actionable improvements
+
+---
+
+## ✨ Key Features
+
+| Feature                       | Description                               |
+| ----------------------------- | ----------------------------------------- |
+| 🕳️ **Blackhole Detection**   | PRs stuck >30 days with no approval       |
+| ⏳ **Delay Tracking**          | PRs inactive >7 days                      |
+| 😴 **Idle PR Detection**      | PRs with zero reviews                     |
+| 📊 **Visual Analytics**       | Charts for PR age & review time           |
+| 🧠 **AI Insights**            | Human-readable insights (not raw metrics) |
+| ⚖️ **Reviewer Load Analysis** | Detect overloaded reviewers               |
+| 💯 **DX Health Score**        | 0–100 score of PR pipeline health         |
+| 🛸 **Demo Mode**              | Full working demo without GitHub token    |
+
+---
+
+## 🧠 Example Insight
+
+> “65% of PRs wait more than 8 hours for first review.
+> 2 reviewers are handling 80% of PRs — causing delays.”
+
+👉 This is the **hidden bottleneck** most teams never see.
+
+---
+
+## 🎯 Why This Matters
+
+Most tools show:
+❌ What happened
+
+We show:
+✅ **Why it happened + how to fix it**
+
+---
+
+## 🛠️ Tech Stack
 
 ```
-Backend:   Express (Node.js) · Axios · dotenv
-Frontend:  Vanilla HTML/CSS/JS · Chart.js
-Fonts:     Syne (display) · Space Mono (code)
-Design:    Dark space theme · CSS animations · Responsive
+Backend:   Node.js · Express · Axios · dotenv
+Frontend:  HTML · CSS · JavaScript · Chart.js
+Design:    Dark theme · Responsive dashboard · Minimal setup
 ```
-
-No React, no build step, no bundler. It just works.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 How It Works
 
-### 1. Clone & Install
+1. Enter GitHub repository details
+2. Fetch PR data via GitHub API
+3. Analyze:
+
+   * Time to first review
+   * Idle time
+   * Reviewer load
+4. Detect bottlenecks
+5. Generate actionable insights
+
+---
+
+## 📊 Metrics Tracked
+
+* ⏳ Time to first review
+* 📅 PR age
+* 😴 Idle duration
+* 📈 Review coverage
+* ⚖️ Reviewer workload
+
+---
+
+## 🧪 PR Classification Logic
+
+| Status               | Meaning               |
+| -------------------- | --------------------- |
+| 🕳️ Blackhole        | Ignored PR (>30 days) |
+| ⏳ Delayed            | No updates (>7 days)  |
+| 😴 Idle              | No reviews            |
+| 🔁 Changes Requested | Needs updates         |
+| ✅ Approved           | Ready to merge        |
+| ⚡ Active             | Healthy progress      |
+
+---
+
+## 🏆 What Makes This Unique
+
+✔ Focuses on **hidden waiting time** (not vanity metrics)
+✔ Converts raw data → **actionable insights**
+✔ Identifies real bottlenecks (review delays, overload)
+✔ Simple, fast, and hackathon-ready
+
+---
+
+## 🔮 Future Scope
+
+* Slack / Teams alerts 🚨
+* Weekly DX reports 📩
+* GitHub App integration 🔗
+* Historical analytics 📊
+* Reviewer recommendation engine 🤖
+
+---
+
+## ⚡ Quick Start (Local)
 
 ```bash
 git clone https://github.com/your-username/pr-blackhole-detector.git
 cd pr-blackhole-detector
 npm install
+npm run dev
 ```
 
-### 2. Configure Environment
+Open:
 
-```bash
-cp .env.example .env
+```
+http://localhost:5000
 ```
 
-Edit `.env`:
+---
+
+## ⚙️ Configuration
+
+Create `.env` file:
+
 ```env
 PORT=5000
-GITHUB_TOKEN=ghp_your_token_here   # optional but recommended
-STALE_DAYS=7                        # days before a PR is "delayed"
-BLACKHOLE_DAYS=30                   # days before a PR is a "blackhole"
+GITHUB_TOKEN=your_token_here
+STALE_DAYS=7
+BLACKHOLE_DAYS=30
 ```
-
-> **No token?** You'll be limited to ~60 GitHub API requests/hour. A token bumps this to 5,000/hour. [Create one here →](https://github.com/settings/tokens)
-
-### 3. Start the Server
-
-```bash
-npm run dev     # development (hot reload)
-npm start       # production
-```
-
-Open **http://localhost:5000** in your browser. Done.
-
----
-
-## 🧭 How to Use
-
-1. **Enter** a GitHub owner (e.g. `facebook`) and repo (e.g. `react`)
-2. **Optionally** paste your GitHub Personal Access Token
-3. Hit **⚡ Scan PRs** — the dashboard populates in seconds
-4. Use **filter buttons** to zoom in on Blackholes, Idle PRs, etc.
-5. Read the **AI Insights** panel on the right for actionable summaries
-6. No token? Hit **🛸 Demo Mode** to see the full experience with synthetic data
-
----
-
-## 📐 PR Classification Logic
-
-| Status | Criteria |
-|---|---|
-| 🕳️ **Blackhole** | Open 30+ days, no approval |
-| ⏳ **Delayed** | No update in 7+ days, no approval |
-| 😴 **Idle** | No reviews at all, open 2+ days |
-| 🔁 **Changes Requested** | Reviewer requested changes |
-| ✅ **Approved** | At least one approval |
-| ⚡ **Active** | Recent activity, moving through pipeline |
-
-Thresholds are fully configurable via `.env`.
-
----
-
-## 📂 Project Structure
-
-```
-pr-blackhole-detector/
-├── server.js                # Express entry point
-├── routes/
-│   └── prRoutes.js          # /api/scan, /api/demo, /api/health
-├── services/
-│   └── githubService.js     # GitHub API, classification, stats, insights
-├── frontend/
-│   └── index.html           # Self-contained dashboard (no build step)
-├── .env.example             # Environment variable template
-├── nodemon.json             # Dev watch config
-└── package.json
-```
-
----
-
-## 🔌 API Reference
-
-### `POST /api/scan`
-Scan a GitHub repository for PR insights.
-
-**Body:**
-```json
-{
-  "owner": "facebook",
-  "repo": "react",
-  "token": "ghp_optional"
-}
-```
-
-**Response:**
-```json
-{
-  "prs": [...],
-  "stats": {
-    "total": 10,
-    "byStatus": { "blackhole": 2, "delayed": 1, ... },
-    "avgAge": 18,
-    "healthScore": 62,
-    "topReviewers": [...],
-    "topAuthors": [...]
-  },
-  "insights": [
-    { "type": "critical", "icon": "🕳️", "title": "...", "message": "..." }
-  ]
-}
-```
-
-### `GET /api/demo`
-Returns realistic mock data — no authentication required.
-
-### `GET /api/health`
-Server health check.
-
----
-
-## 🔮 Roadmap
-
-- [ ] Slack / Teams webhook notifications for new blackholes
-- [ ] Weekly digest email reports
-- [ ] GitHub App integration for automatic PR labeling
-- [ ] Historical trend tracking (SQLite)
-- [ ] Team comparison mode (multi-repo)
-- [ ] Reviewer recommendation engine
 
 ---
 
 ## 🤝 Contributing
 
-PRs welcome! (Don't let them become blackholes 😄)
-
-```bash
-git checkout -b feat/your-feature
-# make your changes
-git commit -m "feat: your feature"
-git push origin feat/your-feature
-# open a PR — we review fast, we promise
-```
+PRs welcome — but don’t let them become blackholes 😄
 
 ---
 
-## 📄 License
+## 📜 License
 
-MIT — free to use, fork, and deploy.
+MIT
 
 ---
 
 <div align="center">
 
-**Built with ❤️ for Hackathon 2026**
+## 🕊️ Motto
 
-*Stop losing code to the void.*
+### **X-Ray Your DX**
+
+Expose the invisible.
+Fix what slows developers down.
+
+---
+
+**Built for Hackathon 2026 🚀**
 
 </div>
